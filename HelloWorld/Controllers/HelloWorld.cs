@@ -3,20 +3,23 @@
 namespace HelloWorld.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("/")]
     public class HelloWorldController : ControllerBase
     {
         private readonly ILogger<HelloWorldController> _logger;
-
-        public HelloWorldController(ILogger<HelloWorldController> logger)
+        private readonly IConfiguration _configuration;
+            
+        public HelloWorldController(ILogger<HelloWorldController> logger, IConfiguration configuration)
         {
             _logger = logger;
+            _configuration = configuration;
         }
 
         [HttpGet]
         public ActionResult<string> HelloWorld()
         {
-            return "Hello World!";
+            string mySetting = _configuration?["ConnectionString"] ?? "DefaultConnectionString";
+            return $"Hello World with config: {mySetting}";
         }
         [HttpGet("{name}")]
         public ActionResult<string> SayHello(string name)
