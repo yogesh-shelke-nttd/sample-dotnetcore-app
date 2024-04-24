@@ -1,5 +1,16 @@
 var builder = WebApplication.CreateBuilder(args);
 
+// Set the new path for the appsettings.json file
+var newPath = Path.Combine(Directory.GetCurrentDirectory(), "properties");
+
+// Clear the existing configuration providers
+builder.Configuration.Sources.Clear();
+
+// Add the configuration providers with the new path
+builder.Configuration.SetBasePath(newPath)
+      .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+      .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+      .AddEnvironmentVariables();
 // Add services to the container.
 
 builder.Services.AddControllers();

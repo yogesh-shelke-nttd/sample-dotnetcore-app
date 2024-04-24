@@ -18,7 +18,9 @@ RUN dotnet publish -c Release -o out HelloWorld/HelloWorld.csproj
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 
 WORKDIR /app
+ENV PROPERTIES_PATH=/app/properties
 COPY --from=build /app/out ./
 
+RUN mkdir -p $PROPERTIES_PATH && cp -f ./appsettings.json $PROPERTIES_PATH/appsettings.json
 # Make sure the app runs on startup
 ENTRYPOINT ["dotnet", "HelloWorld.dll"]
