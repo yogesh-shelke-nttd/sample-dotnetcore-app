@@ -1,0 +1,33 @@
+
+stages:
+- stage: CI-Pre-Check
+  jobs:
+  - job: CI-Pre-Check
+    displayName: 'Lint, Build and Test'
+    pool: 'container-pool'
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet packages'
+      inputs:
+        command: restore
+        projects: '**/*.csproj'
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'Run linting'
+      inputs:
+        command: custom
+        custom: 'dotnet lint'
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'Run tests'
+      inputs:
+        command: test
+        projects: '**/*Tests.csproj'
+        
+    - task: Docker@2
+      displayName: 'Build Docker image'
+      inputs:
+        command: build
+        containerRegistry: 'yourContainerRegistryConnection'
+        Dockerfile: '**/Dockerfile'
+        tags: 'yourImageTag'
