@@ -33,6 +33,9 @@ parameters:
   - name: aksCluster
     type: string
     default: 'dso-ado-k8s-dev-001-aks'
+  - name: helmChart
+    type: string
+    default: 'fdc-dotnetcore-app'
 
 
 
@@ -92,6 +95,14 @@ stages:
                     scriptLocation: 'inlineScript'
                     inlineScript: |
                       kubectl get nodes
+                      USER_NAME="00000000-0000-0000-0000-000000000000"
+                      PASSWORD=$(az acr login --name dsopublic --expose-token --output tsv --query accessToken)
+
+                      helm registry login dsopublic.azurecr.io \
+                        --username $USER_NAME \
+                        --password $PASSWORD
+                        
+                      helm install sample-dotnetcore-app oci://dsopublic.azurecr.io/helm/fdc-dotnetcore-app --version 0.1.0 --dry-run
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
