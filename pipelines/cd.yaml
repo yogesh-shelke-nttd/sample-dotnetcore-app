@@ -27,6 +27,12 @@ parameters:
   - name: dockerRegistry
     type: string
     default: 'dsopublic.azurecr.io'
+  - name: aksResourceGroup
+    type: string
+    default: 'dso-k8s-001'
+  - name: aksCluster
+    type: string
+    default: 'dso-ado-k8s-dev-001-aks'
 
 
 
@@ -63,13 +69,25 @@ stages:
           runOnce:
             deploy:
               steps:
+                - checkout: self
                 - checkout: properties
-
                 - script: |
                     # Add deployment steps for dev environment
                     pwd
                     ls -l
                   displayName: 'Deploy to Dev'
+                - template: templates/steps/get-kubernetes-credentials.yaml
+                - task: AzureCLI@2
+                  enabled: true
+                  displayName: Helm upgrade
+                  env:
+                    KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
+                  inputs:
+                    azureSubscription: $(serviceConnection)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      kubectl get nodes
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
