@@ -45,5 +45,12 @@ The CD pipeline is designed to be triggerred on every PR Merge event in the main
 - UAT
 - Prod
 
+## Build and push to ACR
+
+```bash
+# Assuming you have logged in to az and have the necessary permissions
+az acr build --image sample-dotnetcore-app:v1 --registry dsopublic --file Dockerfile .
+```
+
 # Helm Charts
 We would use Helm charts to deploy to the Kubernetes cluster. More information about this will be provided at a later point

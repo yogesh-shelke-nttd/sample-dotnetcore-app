@@ -4,6 +4,14 @@
 #     include:
 #       - main
 
+resources:
+  repositories:
+    - repository: properties
+      type: git
+      name: 'dsopublic/sample-dotnetcore-app-properties'
+      ref: main
+      endpoint: 'dsahoo-nttd-pat'
+
 trigger: none
 
 parameters:
@@ -55,14 +63,18 @@ stages:
           runOnce:
             deploy:
               steps:
+                - checkout: properties
+
                 - script: |
-                    # Add deployment steps for dev environment
+                  # Add deployment steps for dev environment
+                  pwd
+                  ls -l
                   displayName: 'Deploy to Dev'
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
     dependsOn: DeployDev
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: false
     jobs:
       - deployment: DeployTestJob
         displayName: 'Deploy to Test'
@@ -96,7 +108,7 @@ stages:
   - stage: DeployProd
     displayName: 'Deploy to Prod'
     dependsOn: DeployUAT
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: false
     jobs:
       - deployment: DeployProdJob
         displayName: 'Deploy to Prod'
