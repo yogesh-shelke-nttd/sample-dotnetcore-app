@@ -8,7 +8,7 @@ resources:
   repositories:
     - repository: properties
       type: github
-      name: 'dsopublic/sample-dotnetcore-app-properties'
+      name: 'debasish-sahoo-nttd/sample-dotnetcore-app-properties'
       ref: main
       endpoint: 'dsahoo-nttd-pat'
 
