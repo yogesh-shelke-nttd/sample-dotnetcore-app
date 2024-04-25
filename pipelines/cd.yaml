@@ -77,13 +77,17 @@ stages:
                     ls -l
                   displayName: 'Deploy to Dev'
                 - template: templates/steps/get-kubernetes-credentials.yaml
+                  parameters:
+                    serviceConnection: ${{ parameters.serviceConnection }}
+                    aksResourceGroup: ${{ parameters.aksResourceGroup }}
+                    aksCluster: ${{ parameters.aksCluster }}
                 - task: AzureCLI@2
                   enabled: true
                   displayName: Helm upgrade
                   env:
                     KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
                   inputs:
-                    azureSubscription: $(serviceConnection)
+                    azureSubscription: ${{ parameters.serviceConnection }}
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
