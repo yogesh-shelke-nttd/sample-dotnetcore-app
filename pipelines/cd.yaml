@@ -131,7 +131,7 @@ stages:
                       helmValuesFile=$envFolder/helm/values.yaml
                       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
                         --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
-                        -f $helmValuesFile -f $envVarsFile --dry-run
+                        -f $helmValuesFile -f $envVarsFile
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
