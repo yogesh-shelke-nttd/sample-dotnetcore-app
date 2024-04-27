@@ -107,6 +107,7 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
+                      set -x
                       # Check the nodes
                       kubectl get nodes
                       # Login to helm registry
@@ -124,9 +125,10 @@ stages:
                         echo "Creating namespace $(namespace)"
                         kubectl create namespace $(namespace)
                       fi
-                      #envFolder=
+                      envFolder=$(basename $(Build.Repository.Uri)/envs/$(deployEnv))
+                      ls $envFolder
                       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
-                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --dry-run
+                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) --dry-run
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
