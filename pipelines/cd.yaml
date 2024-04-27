@@ -125,10 +125,13 @@ stages:
                         echo "Creating namespace $(namespace)"
                         kubectl create namespace $(namespace)
                       fi
-                      envFolder=$(basename $(Build.Repository.Uri)/envs/$(deployEnv))
+                      envFolder=$(basename $(Build.Repository.Uri))/envs/$(deployEnv)
                       ls $envFolder
+                      envVarsFile=$envFolder/application/env_vars.yaml
+                      helmValuesFile=$envFolder/helm/values.yaml
                       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
-                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) --dry-run
+                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
+                        -f $helmValuesFile -f $envVarsFile --dry-run
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
