@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: dev.azurecr.io/sample-dotnetcore-app
+  repository: dsopublic.azurecr.io/sample-dotnetcore-app
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1"
+  # Must be overriden in the pipeline
+  # tag: "v1"
 
 imagePullSecrets: []
 nameOverride: ""
