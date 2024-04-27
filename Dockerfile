@@ -21,6 +21,7 @@ WORKDIR /app
 ENV PROPERTIES_PATH=/app/properties
 COPY --from=build /app/out ./
 
+# This may no more be required as we will override the appsettings.json with env vars in the pipeline
 RUN mkdir -p $PROPERTIES_PATH && cp -f ./appsettings.json $PROPERTIES_PATH/appsettings.json
 # Make sure the app runs on startup
 ENTRYPOINT ["dotnet", "HelloWorld.dll"]

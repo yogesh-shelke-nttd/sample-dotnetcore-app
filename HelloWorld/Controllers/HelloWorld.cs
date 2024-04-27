@@ -46,5 +46,12 @@ namespace HelloWorld.Controllers
 
             return Ok(serverInfo);
         }
+
+        [HttpGet("env")]
+        public ActionResult<object> GetEnvironmentVariables()
+        {
+            var envVars = Environment.GetEnvironmentVariables();
+            return Ok(envVars);
+        }
     }
 }
