@@ -35,7 +35,10 @@ parameters:
     default: 'dso-ado-k8s-dev-001-aks'
   - name: helmChart
     type: string
-    default: 'fdc-dotnetcore-app'
+    default: 'dotnet-app'
+  - name: helmChartVersion
+    type: string
+    default: '0.1.0'
 
 
 
@@ -63,10 +66,19 @@ stages:
     displayName: 'Deploy to Dev'
     dependsOn: BuildAndPush
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - name: deployEnv
+        value: 'dev'
+      - name: namespace
+        value: 'dev'
+      - name: releaseName
+        value: 'sample'
     jobs:
       - deployment: DeployDevJob
         displayName: 'Deploy to Dev'
         pool: ${{ parameters.agentPool }}
+        workspace:
+          clean: all
         environment: ${{ parameters.dockerImageName }}-dev
         strategy:
           runOnce:
@@ -78,6 +90,7 @@ stages:
                     # Add deployment steps for dev environment
                     pwd
                     ls -l
+                    env
                   displayName: 'Deploy to Dev'
                 - template: templates/steps/get-kubernetes-credentials.yaml
                   parameters:
@@ -94,15 +107,26 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     inlineScript: |
+                      # Check the nodes
                       kubectl get nodes
+                      # Login to helm registry
                       USER_NAME="00000000-0000-0000-0000-000000000000"
                       PASSWORD=$(az acr login --name dsopublic --expose-token --output tsv --query accessToken)
 
                       helm registry login dsopublic.azurecr.io \
                         --username $USER_NAME \
                         --password $PASSWORD
-                        
-                      helm install sample-dotnetcore-app oci://dsopublic.azurecr.io/helm/fdc-dotnetcore-app --version 0.1.0 --dry-run
+
+                      # Check if namespace exists
+                      if kubectl get namespace $namespace >/dev/null 2>&1; then
+                        echo "Namespace $namespace already exists"
+                      else
+                        echo "Creating namespace $(namespace)"
+                        kubectl create namespace $(namespace)
+                      fi
+                      #envFolder=
+                      helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
+                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --dry-run
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
