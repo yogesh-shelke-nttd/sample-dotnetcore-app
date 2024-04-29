@@ -133,7 +133,7 @@ stages:
                       
                       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
                         --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
-                        -f $helmValuesFile -f $envVarsFile -f secretsValuesFile --wait
+                        -f $helmValuesFile -f $envVarsFile -f $secretsValuesFile --wait
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
