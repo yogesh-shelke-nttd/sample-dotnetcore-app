@@ -85,7 +85,7 @@ stages:
             deploy:
               steps:
                 - checkout: self
-                - checkout: properties
+                - checkout: properties # not needed anymore. will be replaced with azure-automation that contains az templates
                 - script: |
                     # Add deployment steps for dev environment
                     pwd
