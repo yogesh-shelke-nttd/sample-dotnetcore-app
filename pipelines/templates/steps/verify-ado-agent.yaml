@@ -1,0 +1,8 @@
+
+
+steps:
+  - script: |
+    echo -e "Current working directory: $(pwd)"
+    echo -e "Logged In user: $(whoami)"
+    echo -e "List of files in the current directory: \n$(ls -l)"
+    echo -e "Environment Variables: \n$(env)"

@@ -6,11 +6,11 @@
 
 resources:
   repositories:
-    - repository: properties
+    - repository: ado-utils
       type: github
-      name: 'debasish-sahoo-nttd/sample-dotnetcore-app-properties'
-      ref: main
-      endpoint: 'dsahoo-nttd-pat'
+      name: 'launchbynttdata/lcaf-component-provider_az-pipeline_azdo'
+      ref: feature/1456
+      #endpoint: 'dsahoo-nttd-pat'
 
 trigger: none
 
@@ -39,6 +39,12 @@ parameters:
   - name: helmChartVersion
     type: string
     default: '0.1.0'
+  - name: acrName
+    type: string
+    default: 'dsopublic.azurecr.io'
+  - name: imageTag
+    type: string
+    default: ''
 
 
 
@@ -85,55 +91,64 @@ stages:
             deploy:
               steps:
                 - checkout: self
-                - checkout: properties # not needed anymore. will be replaced with azure-automation that contains az templates
-                - script: |
-                    # Add deployment steps for dev environment
-                    pwd
-                    ls -l
-                    env
-                  displayName: 'Deploy to Dev'
+                - checkout: 'ado-utils' # not needed anymore. will be replaced with azure-automation that contains az templates
+                - template: templates/steps/verify-ado-agent.yaml
                 - template: templates/steps/get-kubernetes-credentials.yaml
                   parameters:
                     serviceConnection: ${{ parameters.serviceConnection }}
                     aksResourceGroup: ${{ parameters.aksResourceGroup }}
                     aksCluster: ${{ parameters.aksCluster }}
-                - task: AzureCLI@2
-                  enabled: true
-                  displayName: Helm upgrade
-                  env:
-                    KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
-                  inputs:
-                    azureSubscription: ${{ parameters.serviceConnection }}
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      set -x
-                      # Check the nodes
-                      kubectl get nodes
-                      # Login to helm registry
-                      USER_NAME="00000000-0000-0000-0000-000000000000"
-                      PASSWORD=$(az acr login --name dsopublic --expose-token --output tsv --query accessToken)
+                - template: templates/steps/helm-acr-login.yaml
+                  parameters:
+                    serviceConnection: ${{ parameters.serviceConnection }}
+                    aksResourceGroup: ${{ parameters.acrName }}
+                - template: templates/steps/helm-upgrade.yaml
+                  parameters:
+                    serviceConnection: ${{ parameters.serviceConnection }}
+                    namespace: $(namespace)
+                    releaseName: $(releaseName)
+                    acrName: ${{ parameters.acrName }}
+                    imageTag: ${{ parameters.imageTag }}
+                    deployEnv: $(deployEnv)
+                    helmChart: ${{ parameters.helmChart }}
+                    helmChartVersion: ${{ parameters.helmChartVersion }}
+                # - task: AzureCLI@2
+                #   enabled: true
+                #   displayName: Helm upgrade
+                #   env:
+                #     KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
+                #   inputs:
+                #     azureSubscription: ${{ parameters.serviceConnection }}
+                #     scriptType: 'bash'
+                #     scriptLocation: 'inlineScript'
+                #     inlineScript: |
+                #       set -x
+                #       # # Check the nodes
+                #       # kubectl get nodes
+                #       # # Login to helm registry
+                #       # USER_NAME="00000000-0000-0000-0000-000000000000"
+                #       # PASSWORD=$(az acr login --name dsopublic --expose-token --output tsv --query accessToken)
 
-                      helm registry login dsopublic.azurecr.io \
-                        --username $USER_NAME \
-                        --password $PASSWORD
+                #       # helm registry login dsopublic.azurecr.io \
+                #       #   --username $USER_NAME \
+                #       #   --password $PASSWORD
 
-                      # Check if namespace exists
-                      if kubectl get namespace $namespace >/dev/null 2>&1; then
-                        echo "Namespace $namespace already exists"
-                      else
-                        echo "Creating namespace $(namespace)"
-                        kubectl create namespace $(namespace)
-                      fi
-                      envFolder=$(basename $(Build.Repository.Uri))/envs/$(deployEnv)
-                      ls $envFolder
-                      envVarsFile=$envFolder/application/env_vars.yaml
-                      secretsValuesFile=$envFolder/application/secrets.yaml
-                      helmValuesFile=$envFolder/helm/values.yaml
+                #       # Check if namespace exists
+                #       if kubectl get namespace $namespace >/dev/null 2>&1; then
+                #         echo "Namespace $namespace already exists"
+                #       else
+                #         echo "Creating namespace $(namespace)"
+                #         kubectl create namespace $(namespace)
+                #       fi
+                #       envFolder=$(basename $(Build.Repository.Uri))/envs/$(deployEnv)
+                #       ls $envFolder
+                #       envVarsFile=$envFolder/application/env_vars.yaml
+                #       secretsValuesFile=$envFolder/application/secrets.yaml
+                #       helmValuesFile=$envFolder/helm/values.yaml
                       
-                      helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
-                        --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
-                        -f $helmValuesFile -f $envVarsFile -f $secretsValuesFile --wait
+                #       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
+                #         --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
+                #         -f $helmValuesFile -f $envVarsFile -f $secretsValuesFile --wait
 
   - stage: DeployTest
     displayName: 'Deploy to Test'
