@@ -10,7 +10,7 @@ resources:
       type: github
       name: 'launchbynttdata/lcaf-component-provider_az-pipeline_azdo'
       ref: feature/1456
-      #endpoint: 'dsahoo-nttd-pat'
+      endpoint: 'dsahoo-nttd-pat'
 
 trigger: none
 
