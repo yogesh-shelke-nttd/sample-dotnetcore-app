@@ -101,7 +101,7 @@ stages:
                 - template: templates/steps/helm-acr-login.yaml
                   parameters:
                     serviceConnection: ${{ parameters.serviceConnection }}
-                    aksResourceGroup: ${{ parameters.acrName }}
+                    acrName: ${{ parameters.acrName }}
                 - template: templates/steps/helm-upgrade.yaml
                   parameters:
                     serviceConnection: ${{ parameters.serviceConnection }}
