@@ -35,7 +35,7 @@ steps:
     - ${{ step }}
   - task: AzureCLI@2
     enabled: ${{ parameters.enabled }}
-    displayName: Helm upgrade
+    displayName: Helm Diff
     env:
       KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
     inputs:

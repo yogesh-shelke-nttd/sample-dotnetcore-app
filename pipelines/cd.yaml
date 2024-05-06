@@ -70,6 +70,13 @@ stages:
     displayName: 'Dev - Pre deploy'
     dependsOn: BuildAndPush
     # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - name: deployEnv
+        value: 'dev'
+      - name: namespace
+        value: 'dev'
+      - name: releaseName
+        value: 'sample'
     jobs:
       - job: PreDeployDevJob
         displayName: 'Dev - Pre deploy'
@@ -127,16 +134,6 @@ stages:
               steps:
                 - checkout: self
                 - checkout: 'ado-utils'
-                - template: templates/steps/verify-ado-agent.yaml
-                - template: templates/steps/get-kubernetes-credentials.yaml
-                  parameters:
-                    serviceConnection: ${{ parameters.serviceConnection }}
-                    aksResourceGroup: ${{ parameters.aksResourceGroup }}
-                    aksCluster: ${{ parameters.aksCluster }}
-                - template: templates/steps/helm-acr-login.yaml
-                  parameters:
-                    serviceConnection: ${{ parameters.serviceConnection }}
-                    acrName: ${{ parameters.acrName }}
                 - template: templates/steps/helm-upgrade.yaml
                   parameters:
                     serviceConnection: ${{ parameters.serviceConnection }}
@@ -146,7 +143,18 @@ stages:
                     imageTag: ${{ parameters.imageTag }}
                     deployEnv: $(deployEnv)
                     helmChart: ${{ parameters.helmChart }}
-                    helmChartVersion: ${{ parameters.helmChartVersion }}         
+                    helmChartVersion: ${{ parameters.helmChartVersion }}
+                    additionalSteps:
+                      - template: templates/steps/verify-ado-agent.yaml
+                      - template: templates/steps/get-kubernetes-credentials.yaml
+                        parameters:
+                          serviceConnection: ${{ parameters.serviceConnection }}
+                          aksResourceGroup: ${{ parameters.aksResourceGroup }}
+                          aksCluster: ${{ parameters.aksCluster }}
+                      - template: templates/steps/helm-acr-login.yaml
+                        parameters:
+                          serviceConnection: ${{ parameters.serviceConnection }}
+                          acrName: ${{ parameters.acrName }}       
   - stage: DeployTest
     displayName: 'Deploy to Test'
     dependsOn: DeployDev
