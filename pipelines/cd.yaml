@@ -47,8 +47,6 @@ parameters:
     default: ''
 
 
-
-
 stages:
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -68,10 +66,47 @@ stages:
                 echo 'Building and pushing Docker image: ${{ parameters.dockerImageName }}:$(Build.BuildId)'
                 az acr build --image ${{ parameters.dockerImageName }}:$(Build.BuildId) --registry ${{ parameters.dockerRegistry }} --file Dockerfile .
 
+  - stage: PreDeployDev
+    displayName: 'Dev - Pre deploy'
+    dependsOn: BuildAndPush
+    # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: PreDeployDevJob
+        displayName: 'Dev - Pre deploy'
+        pool: ${{ parameters.agentPool }}
+        workspace:
+          clean: all
+        steps:
+          - checkout: self
+          - checkout: 'ado-utils'
+          - template: templates/steps/helm-diff.yaml
+            parameters:
+              serviceConnection: ${{ parameters.serviceConnection }}
+              namespace: $(namespace)
+              releaseName: $(releaseName)
+              acrName: ${{ parameters.acrName }}
+              imageTag: ${{ parameters.imageTag }}
+              deployEnv: $(deployEnv)
+              helmChart: ${{ parameters.helmChart }}
+              helmChartVersion: ${{ parameters.helmChartVersion }}
+              additionalSteps:
+                - template: templates/steps/asdf-install.yaml
+                  parameters:
+                    pluginName: 'helm-diff'
+                    pluginVersion: '3.9.5'
+                - template: templates/steps/get-kubernetes-credentials.yaml
+                  parameters:
+                    serviceConnection: ${{ parameters.serviceConnection }}
+                    aksResourceGroup: ${{ parameters.aksResourceGroup }}
+                    aksCluster: ${{ parameters.aksCluster }}
+                - template: templates/steps/helm-acr-login.yaml
+                  parameters:
+                    serviceConnection: ${{ parameters.serviceConnection }}
+                    acrName: ${{ parameters.acrName }}
   - stage: DeployDev
     displayName: 'Deploy to Dev'
-    dependsOn: BuildAndPush
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    dependsOn: PreDeployDev
+    # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
       - name: deployEnv
         value: 'dev'
@@ -91,7 +126,7 @@ stages:
             deploy:
               steps:
                 - checkout: self
-                - checkout: 'ado-utils' # not needed anymore. will be replaced with azure-automation that contains az templates
+                - checkout: 'ado-utils'
                 - template: templates/steps/verify-ado-agent.yaml
                 - template: templates/steps/get-kubernetes-credentials.yaml
                   parameters:
@@ -111,45 +146,7 @@ stages:
                     imageTag: ${{ parameters.imageTag }}
                     deployEnv: $(deployEnv)
                     helmChart: ${{ parameters.helmChart }}
-                    helmChartVersion: ${{ parameters.helmChartVersion }}
-                # - task: AzureCLI@2
-                #   enabled: true
-                #   displayName: Helm upgrade
-                #   env:
-                #     KUBECONFIG: "$(Pipeline.Workspace)/kubeconfig"
-                #   inputs:
-                #     azureSubscription: ${{ parameters.serviceConnection }}
-                #     scriptType: 'bash'
-                #     scriptLocation: 'inlineScript'
-                #     inlineScript: |
-                #       set -x
-                #       # # Check the nodes
-                #       # kubectl get nodes
-                #       # # Login to helm registry
-                #       # USER_NAME="00000000-0000-0000-0000-000000000000"
-                #       # PASSWORD=$(az acr login --name dsopublic --expose-token --output tsv --query accessToken)
-
-                #       # helm registry login dsopublic.azurecr.io \
-                #       #   --username $USER_NAME \
-                #       #   --password $PASSWORD
-
-                #       # Check if namespace exists
-                #       if kubectl get namespace $namespace >/dev/null 2>&1; then
-                #         echo "Namespace $namespace already exists"
-                #       else
-                #         echo "Creating namespace $(namespace)"
-                #         kubectl create namespace $(namespace)
-                #       fi
-                #       envFolder=$(basename $(Build.Repository.Uri))/envs/$(deployEnv)
-                #       ls $envFolder
-                #       envVarsFile=$envFolder/application/env_vars.yaml
-                #       secretsValuesFile=$envFolder/application/secrets.yaml
-                #       helmValuesFile=$envFolder/helm/values.yaml
-                      
-                #       helm upgrade --install $(releaseName) oci://dsopublic.azurecr.io/helm/${{ parameters.helmChart }} \
-                #         --version ${{ parameters.helmChartVersion }} -n $(namespace) --set image.tag=$(Build.BuildId) \
-                #         -f $helmValuesFile -f $envVarsFile -f $secretsValuesFile --wait
-
+                    helmChartVersion: ${{ parameters.helmChartVersion }}         
   - stage: DeployTest
     displayName: 'Deploy to Test'
     dependsOn: DeployDev

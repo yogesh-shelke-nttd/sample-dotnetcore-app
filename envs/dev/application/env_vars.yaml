@@ -5,3 +5,4 @@ env:
   ConnectionString: overrideConnectionString
   ASPNETCORE_ENVIRONMENT: Development
   ASPNETCORE_URLS: http://+:8080
+  test_var: test_value
