@@ -15,6 +15,7 @@ resources:
 trigger: none
 
 parameters:
+  # serviceConnection may be different for each environment in real-world scenarios
   - name: serviceConnection
     type: string
     default: 'ado-sp'
@@ -29,7 +30,7 @@ parameters:
     default: 'sample-dotnetcore-app'
   - name: imageTag
     type: string
-    default: ''
+    default: false
   - name: dockerRegistry
     type: string
     default: 'dsopublic.azurecr.io'

@@ -9,11 +9,11 @@ parameters:
 stages:
   - ${{ each deployEnv in parameters.deployEnvironments }}:
     - stage: ${{ deployEnv.environment}}_PreDeploy
-      displayName: '${{ deployEnv.environment}}- Pre deploy'
+      displayName: '${{ deployEnv.environment }}- Pre deploy'
       dependsOn: ${{deployEnv.dependsOn}}
       jobs:
         - job: PreDeployDevJob
-          displayName: '${{deployEnv.dependsOn}} - Pre deploy'
+          displayName: '${{ deployEnv.environment }} - Pre deploy'
           pool: ${{ parameters.agentPool }}
           workspace:
             clean: all
@@ -22,7 +22,7 @@ stages:
             - checkout: 'ado-utils'
             - template: ../steps/helm-diff.yaml
               parameters:
-                serviceConnection: ${{ parameters.serviceConnection }}
+                serviceConnection: ${{ deployEnv.serviceConnection }}
                 namespace: ${{ deployEnv.namespace }}
                 releaseName: ${{ deployEnv.releaseName }}
                 acrName: ${{ deployEnv.acrName }}

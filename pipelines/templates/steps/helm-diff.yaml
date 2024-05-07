@@ -16,10 +16,10 @@ parameters:
     default: false
   - name: imageName
     type: string
-    default: ''
+    default: false
   - name: imageTag
     type: string
-    default: ''
+    default: false
   - name: deployEnv
     type: string
     default: false
@@ -47,8 +47,9 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: |
         set -x
+        env
 
-        if [[ "${{ parameters.imageTag }}" == "" ]]; then
+        if [[ "${{ parameters.imageTag }}" == "false" ]]; then
           imageTag=$(Build.BuildId)
         else
           imageTag=${{ parameters.imageTag }}
