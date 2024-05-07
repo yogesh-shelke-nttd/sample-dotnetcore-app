@@ -90,7 +90,7 @@ stages:
           dependsOn: 'dev_Deploy'
           azureEnvironment: aks-${{ parameters.helmReleaseName }}-test
           namespace: 'test'
-          releaseName: 'sample'
+          releaseName: ${{ parameters.helmReleaseName }}
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
@@ -103,7 +103,7 @@ stages:
           dependsOn: 'test_Deploy'
           azureEnvironment: aks-${{ parameters.helmReleaseName }}-uat
           namespace: 'uat'
-          releaseName: 'sample'
+          releaseName: ${{ parameters.helmReleaseName }}
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
@@ -116,7 +116,7 @@ stages:
           dependsOn: 'uat_Deploy'
           azureEnvironment: aks-${{ parameters.helmReleaseName }}-prod
           namespace: 'prod'
-          releaseName: ${{ parameters.releaseName }}
+          releaseName: ${{ parameters.helmReleaseName }}
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
