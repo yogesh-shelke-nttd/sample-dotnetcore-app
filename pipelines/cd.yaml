@@ -28,9 +28,10 @@ parameters:
   - name: dockerImageName
     type: string
     default: 'sample-dotnetcore-app'
+  # If imageTag is set to "None", the build ID will be used as the image tag
   - name: imageTag
     type: string
-    default: false
+    default: "None"
   - name: dockerRegistry
     type: string
     default: 'dsopublic.azurecr.io'
