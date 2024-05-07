@@ -1,1 +1,8 @@
-ENVIRONMENT: test
+env: 
+  ENVIRONMENT: test
+  Logging__LogLevel__Default: Debug
+  sampleEnv1: overrideSampleEnv1
+  ConnectionString: overrideConnectionString
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_URLS: http://+:8080
+  test_var: test_value

@@ -53,4 +53,5 @@ az acr build --image sample-dotnetcore-app:v1 --registry dsopublic --file Docker
 ```
 
 # Helm Charts
-We would use Helm charts to deploy to the Kubernetes cluster. More information about this will be provided at a later point
+
+This sample app is deployed to kubernetes cluster using this [Helm Chart](https://github.com/launchbynttdata/helm-k8s-chart_umbrella-dotnet_app)

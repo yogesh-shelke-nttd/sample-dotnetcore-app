@@ -9,7 +9,7 @@ parameters:
 stages:
   - ${{ each deployEnv in parameters.deployEnvironments }}:
     - stage: ${{ deployEnv.environment}}_PreDeploy
-      displayName: '${{ deployEnv.environment }}- Pre deploy'
+      displayName: '${{ deployEnv.environment }} - Pre deploy'
       dependsOn: ${{deployEnv.dependsOn}}
       jobs:
         - job: PreDeployDevJob
