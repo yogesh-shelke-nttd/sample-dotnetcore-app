@@ -21,9 +21,15 @@ parameters:
   - name: agentPool
     type: string
     default: 'container-pool'
+  - name: acrName
+    type: string
+    default: 'dsopublic.azurecr.io'
   - name: dockerImageName
     type: string
     default: 'sample-dotnetcore-app'
+  - name: imageTag
+    type: string
+    default: ''
   - name: dockerRegistry
     type: string
     default: 'dsopublic.azurecr.io'
@@ -39,13 +45,10 @@ parameters:
   - name: helmChartVersion
     type: string
     default: '0.1.0'
-  - name: acrName
+  - name: helmReleaseName
     type: string
-    default: 'dsopublic.azurecr.io'
-  - name: imageTag
-    type: string
-    default: ''
-
+    default: 'sample'
+  
 
 stages:
   - stage: BuildAndPush
@@ -66,142 +69,198 @@ stages:
                 echo 'Building and pushing Docker image: ${{ parameters.dockerImageName }}:$(Build.BuildId)'
                 az acr build --image ${{ parameters.dockerImageName }}:$(Build.BuildId) --registry ${{ parameters.dockerRegistry }} --file Dockerfile .
 
-  - stage: PreDeployDev
-    displayName: 'Dev - Pre deploy'
-    dependsOn: BuildAndPush
-    # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    variables:
-      - name: deployEnv
-        value: 'dev'
-      - name: namespace
-        value: 'dev'
-      - name: releaseName
-        value: 'sample'
-    jobs:
-      - job: PreDeployDevJob
-        displayName: 'Dev - Pre deploy'
-        pool: ${{ parameters.agentPool }}
-        workspace:
-          clean: all
-        steps:
-          - checkout: self
-          - checkout: 'ado-utils'
-          - template: templates/steps/helm-diff.yaml
-            parameters:
-              serviceConnection: ${{ parameters.serviceConnection }}
-              namespace: $(namespace)
-              releaseName: $(releaseName)
-              acrName: ${{ parameters.acrName }}
-              imageTag: ${{ parameters.imageTag }}
-              deployEnv: $(deployEnv)
-              helmChart: ${{ parameters.helmChart }}
-              helmChartVersion: ${{ parameters.helmChartVersion }}
-              additionalSteps:
-                - template: templates/steps/asdf-install.yaml
-                  parameters:
-                    pluginName: 'helm-diff'
-                    pluginVersion: '3.9.5'
-                - template: templates/steps/get-kubernetes-credentials.yaml
-                  parameters:
-                    serviceConnection: ${{ parameters.serviceConnection }}
-                    aksResourceGroup: ${{ parameters.aksResourceGroup }}
-                    aksCluster: ${{ parameters.aksCluster }}
-                - template: templates/steps/helm-acr-login.yaml
-                  parameters:
-                    serviceConnection: ${{ parameters.serviceConnection }}
-                    acrName: ${{ parameters.acrName }}
-  - stage: DeployDev
-    displayName: 'Deploy to Dev'
-    dependsOn: PreDeployDev
-    # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    variables:
-      - name: deployEnv
-        value: 'dev'
-      - name: namespace
-        value: 'dev'
-      - name: releaseName
-        value: 'sample'
-    jobs:
-      - deployment: DeployDevJob
-        displayName: 'Deploy to Dev'
-        pool: ${{ parameters.agentPool }}
-        workspace:
-          clean: all
-        environment: ${{ parameters.dockerImageName }}-dev
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
-                - checkout: 'ado-utils'
-                - template: templates/steps/helm-upgrade.yaml
-                  parameters:
-                    serviceConnection: ${{ parameters.serviceConnection }}
-                    namespace: $(namespace)
-                    releaseName: $(releaseName)
-                    acrName: ${{ parameters.acrName }}
-                    imageTag: ${{ parameters.imageTag }}
-                    deployEnv: $(deployEnv)
-                    helmChart: ${{ parameters.helmChart }}
-                    helmChartVersion: ${{ parameters.helmChartVersion }}
-                    additionalSteps:
-                      - template: templates/steps/verify-ado-agent.yaml
-                      - template: templates/steps/get-kubernetes-credentials.yaml
-                        parameters:
-                          serviceConnection: ${{ parameters.serviceConnection }}
-                          aksResourceGroup: ${{ parameters.aksResourceGroup }}
-                          aksCluster: ${{ parameters.aksCluster }}
-                      - template: templates/steps/helm-acr-login.yaml
-                        parameters:
-                          serviceConnection: ${{ parameters.serviceConnection }}
-                          acrName: ${{ parameters.acrName }}       
-  - stage: DeployTest
-    displayName: 'Deploy to Test'
-    dependsOn: DeployDev
-    condition: false
-    jobs:
-      - deployment: DeployTestJob
-        displayName: 'Deploy to Test'
-        pool: ${{ parameters.agentPool }}
-        environment: ${{ parameters.dockerImageName }}-test
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - script: |
-                    # Add deployment steps for test environment
-                  displayName: 'Deploy to Test'
+  - template: templates/stages/helm-app-deploy.yaml
+    parameters:
+      agentPool: ${{ parameters.agentPool }}
+      deployEnvironments:
+        - environment: 'dev'
+          dependsOn: 'BuildAndPush'
+          azureEnvironment: aks-${{ parameters.helmReleaseName }}-dev
+          namespace: 'dev'
+          releaseName: ${{ parameters.helmReleaseName }}
+          acrName: ${{ parameters.acrName }}
+          imageName: ${{ parameters.dockerImageName }}
+          imageTag: ${{ parameters.imageTag }}
+          helmChart: ${{ parameters.helmChart }}
+          helmChartVersion: ${{ parameters.helmChartVersion }}
+          serviceConnection: ${{ parameters.serviceConnection }}
+          aksResourceGroup: ${{ parameters.aksResourceGroup }}
+          aksCluster: ${{ parameters.aksCluster }}
+        - environment: 'test'
+          dependsOn: 'dev_Deploy'
+          azureEnvironment: aks-${{ parameters.helmReleaseName }}-test
+          namespace: 'test'
+          releaseName: 'sample'
+          acrName: ${{ parameters.acrName }}
+          imageName: ${{ parameters.dockerImageName }}
+          imageTag: ${{ parameters.imageTag }}
+          helmChart: ${{ parameters.helmChart }}
+          helmChartVersion: ${{ parameters.helmChartVersion }}
+          serviceConnection: ${{ parameters.serviceConnection }}
+          aksResourceGroup: ${{ parameters.aksResourceGroup }}
+          aksCluster: ${{ parameters.aksCluster }}
+        - environment: 'uat'
+          dependsOn: 'test_Deploy'
+          azureEnvironment: aks-${{ parameters.helmReleaseName }}-uat
+          namespace: 'uat'
+          releaseName: 'sample'
+          acrName: ${{ parameters.acrName }}
+          imageName: ${{ parameters.dockerImageName }}
+          imageTag: ${{ parameters.imageTag }}
+          helmChart: ${{ parameters.helmChart }}
+          helmChartVersion: ${{ parameters.helmChartVersion }}
+          serviceConnection: ${{ parameters.serviceConnection }}
+          aksResourceGroup: ${{ parameters.aksResourceGroup }}
+          aksCluster: ${{ parameters.aksCluster }}
+        - environment: 'prod'
+          dependsOn: 'uat_Deploy'
+          azureEnvironment: aks-${{ parameters.helmReleaseName }}-prod
+          namespace: 'prod'
+          releaseName: ${{ parameters.releaseName }}
+          acrName: ${{ parameters.acrName }}
+          imageName: ${{ parameters.dockerImageName }}
+          imageTag: ${{ parameters.imageTag }}
+          helmChart: ${{ parameters.helmChart }}
+          helmChartVersion: ${{ parameters.helmChartVersion }}
+          serviceConnection: ${{ parameters.serviceConnection }}
+          aksResourceGroup: ${{ parameters.aksResourceGroup }}
+          aksCluster: ${{ parameters.aksCluster }}
+  # - stage: PreDeployDev
+  #   displayName: 'Dev - Pre deploy'
+  #   dependsOn: BuildAndPush
+  #   # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  #   variables:
+  #     - name: deployEnv
+  #       value: 'dev'
+  #     - name: namespace
+  #       value: 'dev'
+  #     - name: releaseName
+  #       value: 'sample'
+  #   jobs:
+  #     - job: PreDeployDevJob
+  #       displayName: 'Dev - Pre deploy'
+  #       pool: ${{ parameters.agentPool }}
+  #       workspace:
+  #         clean: all
+  #       steps:
+  #         - checkout: self
+  #         - checkout: 'ado-utils'
+  #         - template: templates/steps/helm-diff.yaml
+  #           parameters:
+  #             serviceConnection: ${{ parameters.serviceConnection }}
+  #             namespace: $(namespace)
+  #             releaseName: $(releaseName)
+  #             acrName: ${{ parameters.acrName }}
+  #             imageTag: ${{ parameters.imageTag }}
+  #             deployEnv: $(deployEnv)
+  #             helmChart: ${{ parameters.helmChart }}
+  #             helmChartVersion: ${{ parameters.helmChartVersion }}
+  #             additionalSteps:
+  #               - template: templates/steps/asdf-install.yaml
+  #                 parameters:
+  #                   pluginName: 'helm-diff'
+  #                   pluginVersion: '3.9.5'
+  #               - template: templates/steps/get-kubernetes-credentials.yaml
+  #                 parameters:
+  #                   serviceConnection: ${{ parameters.serviceConnection }}
+  #                   aksResourceGroup: ${{ parameters.aksResourceGroup }}
+  #                   aksCluster: ${{ parameters.aksCluster }}
+  #               - template: templates/steps/helm-acr-login.yaml
+  #                 parameters:
+  #                   serviceConnection: ${{ parameters.serviceConnection }}
+  #                   acrName: ${{ parameters.acrName }}
+  # - stage: DeployDev
+  #   displayName: 'Deploy to Dev'
+  #   dependsOn: PreDeployDev
+  #   # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  #   variables:
+  #     - name: deployEnv
+  #       value: 'dev'
+  #     - name: namespace
+  #       value: 'dev'
+  #     - name: releaseName
+  #       value: 'sample'
+  #   jobs:
+  #     - deployment: DeployDevJob
+  #       displayName: 'Deploy to Dev'
+  #       pool: ${{ parameters.agentPool }}
+  #       workspace:
+  #         clean: all
+  #       environment: ${{ parameters.dockerImageName }}-dev
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - checkout: self
+  #               - checkout: 'ado-utils'
+  #               - template: templates/steps/helm-upgrade.yaml
+  #                 parameters:
+  #                   serviceConnection: ${{ parameters.serviceConnection }}
+  #                   namespace: $(namespace)
+  #                   releaseName: $(releaseName)
+  #                   acrName: ${{ parameters.acrName }}
+  #                   imageTag: ${{ parameters.imageTag }}
+  #                   deployEnv: $(deployEnv)
+  #                   helmChart: ${{ parameters.helmChart }}
+  #                   helmChartVersion: ${{ parameters.helmChartVersion }}
+  #                   additionalSteps:
+  #                     - template: templates/steps/verify-ado-agent.yaml
+  #                     - template: templates/steps/get-kubernetes-credentials.yaml
+  #                       parameters:
+  #                         serviceConnection: ${{ parameters.serviceConnection }}
+  #                         aksResourceGroup: ${{ parameters.aksResourceGroup }}
+  #                         aksCluster: ${{ parameters.aksCluster }}
+  #                     - template: templates/steps/helm-acr-login.yaml
+  #                       parameters:
+  #                         serviceConnection: ${{ parameters.serviceConnection }}
+  #                         acrName: ${{ parameters.acrName }}       
+  # - stage: DeployTest
+  #   displayName: 'Deploy to Test'
+  #   dependsOn: DeployDev
+  #   condition: false
+  #   jobs:
+  #     - deployment: DeployTestJob
+  #       displayName: 'Deploy to Test'
+  #       pool: ${{ parameters.agentPool }}
+  #       environment: ${{ parameters.dockerImageName }}-test
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - script: |
+  #                   # Add deployment steps for test environment
+  #                 displayName: 'Deploy to Test'
 
-  - stage: DeployUAT
-    displayName: 'Deploy to UAT'
-    dependsOn: DeployTest
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    jobs:
-      - deployment: DeployUATJob
-        displayName: 'Deploy to UAT'
-        pool: ${{ parameters.agentPool }}
-        environment: ${{ parameters.dockerImageName }}-uat
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - script: |
-                    # Add deployment steps for UAT environment
-                  displayName: 'Deploy to UAT'
+  # - stage: DeployUAT
+  #   displayName: 'Deploy to UAT'
+  #   dependsOn: DeployTest
+  #   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  #   jobs:
+  #     - deployment: DeployUATJob
+  #       displayName: 'Deploy to UAT'
+  #       pool: ${{ parameters.agentPool }}
+  #       environment: ${{ parameters.dockerImageName }}-uat
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - script: |
+  #                   # Add deployment steps for UAT environment
+  #                 displayName: 'Deploy to UAT'
 
-  - stage: DeployProd
-    displayName: 'Deploy to Prod'
-    dependsOn: DeployUAT
-    condition: false
-    jobs:
-      - deployment: DeployProdJob
-        displayName: 'Deploy to Prod'
-        pool: ${{ parameters.agentPool }}
-        environment: ${{ parameters.dockerImageName }}-prod
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - script: |
-                    # Add deployment steps for prod environment
-                  displayName: 'Deploy to Prod'
+  # - stage: DeployProd
+  #   displayName: 'Deploy to Prod'
+  #   dependsOn: DeployUAT
+  #   condition: false
+  #   jobs:
+  #     - deployment: DeployProdJob
+  #       displayName: 'Deploy to Prod'
+  #       pool: ${{ parameters.agentPool }}
+  #       environment: ${{ parameters.dockerImageName }}-prod
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - script: |
+  #                   # Add deployment steps for prod environment
+  #                 displayName: 'Deploy to Prod'

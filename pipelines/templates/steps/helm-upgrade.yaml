@@ -14,6 +14,9 @@ parameters:
   - name: acrName
     type: string
     default: false
+  - name: imageName
+    type: string
+    default: ''
   - name: imageTag
     type: string
     default: ''
@@ -50,6 +53,7 @@ steps:
         else
           imageTag=${{ parameters.imageTag }}
         fi
+        imageRepository="${{ parameters.acrName }}/${{ parameters.imageName }}"
       
         # Check if namespace exists
         if kubectl get namespace ${{ parameters.namespace }} >/dev/null 2>&1; then
@@ -61,11 +65,11 @@ steps:
 
         # Get the env vars and secrets
         envFolder=$(basename $(Build.Repository.Uri))/envs/${{ parameters.deployEnv }}
-        ls $envFolder
-        envVarsFile=$envFolder/application/env_vars.yaml
-        secretsValuesFile=$envFolder/application/secrets.yaml
-        helmValuesFile=$envFolder/helm/values.yaml
+        ls ${envFolder}
+        envVarsFile=${envFolder}/application/env_vars.yaml
+        secretsValuesFile=${envFolder}/application/secrets.yaml
+        helmValuesFile=${envFolder}/helm/values.yaml
         
         helm upgrade --install ${{ parameters.releaseName }} oci://${{ parameters.acrName }}/helm/${{ parameters.helmChart }} \
-          --version ${{ parameters.helmChartVersion }} -n ${{ parameters.namespace }} --set image.tag=$imageTag \
-          -f $helmValuesFile -f $envVarsFile -f $secretsValuesFile --wait
+          --version ${{ parameters.helmChartVersion }} -n ${{ parameters.namespace }} --set image.tag=${imageTag} \
+          --set image.repository="${imageRepository}" -f ${helmValuesFile} -f ${envVarsFile} -f ${secretsValuesFile} --wait
