@@ -6,11 +6,21 @@ trigger:
 
 resources:
   repositories:
-    - repository: ado-utils
+    # You do not have to checkout this repo to use the templates
+    - repository: utils
       type: github
       name: 'launchbynttdata/lcaf-component-provider_az-pipeline_azdo'
       ref: feature/1456
       endpoint: 'launchbynttdata-github-token'
+
+variables:
+  # This is how you set variables for the repositories
+  utils_name: $[ resources.repositories.utils.name ]
+  # Variables for service connection. You cannot dynamically set them in tasks
+  service_connection_uat: "ado-sp"
+  service_connection_test: "ado-sp"
+  service_connection_prod: "ado-sp"
+  service_connection_dev: "ado-sp"
 
 parameters:
   # serviceConnection may be different for each environment in real-world scenarios
@@ -58,23 +68,14 @@ stages:
         displayName: 'Build and Push'
         pool: ${{ parameters.agentPool }}
         steps:
-          - template: templates/steps/acr-build-push-docker-image.yaml
+          - template: /iac/steps/acr-build-push-docker-image.yaml@utils
             parameters:
               serviceConnection: ${{ parameters.serviceConnection }}
               dockerImageName: ${{ parameters.dockerImageName }}
               dockerImageTag: $(Build.BuildId)
               acrRegistry: ${{ parameters.acrName }}
-          # - task: AzureCLI@2
-          #   displayName: 'Build and Push Docker Image'
-          #   inputs:
-          #     azureSubscription: ${{ parameters.serviceConnection }}
-          #     scriptType: bash
-          #     scriptLocation: inlineScript
-          #     inlineScript: |
-          #       echo 'Building and pushing Docker image: ${{ parameters.dockerImageName }}:$(Build.BuildId)'
-          #       az acr build --image ${{ parameters.dockerImageName }}:$(Build.BuildId) --registry ${{ parameters.dockerRegistry }} --file Dockerfile .
 
-  - template: templates/stages/helm-app-deploy.yaml
+  - template: /iac/stages/helm-app-deploy.yaml@utils
     parameters:
       agentPool: ${{ parameters.agentPool }}
       deployEnvironments:
@@ -88,7 +89,7 @@ stages:
           imageTag: ${{ parameters.imageTag }}
           helmChart: ${{ parameters.helmChart }}
           helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: ${{ parameters.serviceConnection }}
+          serviceConnection: $(service_connection_dev)
           aksResourceGroup: ${{ parameters.aksResourceGroup }}
           aksCluster: ${{ parameters.aksCluster }}
         - environment: 'test'
@@ -101,7 +102,7 @@ stages:
           imageTag: ${{ parameters.imageTag }}
           helmChart: ${{ parameters.helmChart }}
           helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: ${{ parameters.serviceConnection }}
+          serviceConnection: $(service_connection_test)
           aksResourceGroup: ${{ parameters.aksResourceGroup }}
           aksCluster: ${{ parameters.aksCluster }}
         - environment: 'uat'
@@ -114,7 +115,7 @@ stages:
           imageTag: ${{ parameters.imageTag }}
           helmChart: ${{ parameters.helmChart }}
           helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: ${{ parameters.serviceConnection }}
+          serviceConnection: $(service_connection_uat)
           aksResourceGroup: ${{ parameters.aksResourceGroup }}
           aksCluster: ${{ parameters.aksCluster }}
         - environment: 'prod'
@@ -127,7 +128,7 @@ stages:
           imageTag: ${{ parameters.imageTag }}
           helmChart: ${{ parameters.helmChart }}
           helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: ${{ parameters.serviceConnection }}
+          serviceConnection: $(service_connection_prod)
           aksResourceGroup: ${{ parameters.aksResourceGroup }}
           aksCluster: ${{ parameters.aksCluster }}
   
