@@ -58,16 +58,21 @@ stages:
         displayName: 'Build and Push'
         pool: ${{ parameters.agentPool }}
         steps:
-          #- checkout: self
-          - task: AzureCLI@2
-            displayName: 'Build and Push Docker Image'
-            inputs:
-              azureSubscription: ${{ parameters.serviceConnection }}
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                echo 'Building and pushing Docker image: ${{ parameters.dockerImageName }}:$(Build.BuildId)'
-                az acr build --image ${{ parameters.dockerImageName }}:$(Build.BuildId) --registry ${{ parameters.dockerRegistry }} --file Dockerfile .
+          - template: templates/steps/acr-build-push-docker-image.yaml
+            parameters:
+              serviceConnection: ${{ parameters.serviceConnection }}
+              dockerImageName: ${{ parameters.dockerImageName }}
+              dockerImageTag: $(Build.BuildId)
+              acrRegistry: ${{ parameters.acrName }}
+          # - task: AzureCLI@2
+          #   displayName: 'Build and Push Docker Image'
+          #   inputs:
+          #     azureSubscription: ${{ parameters.serviceConnection }}
+          #     scriptType: bash
+          #     scriptLocation: inlineScript
+          #     inlineScript: |
+          #       echo 'Building and pushing Docker image: ${{ parameters.dockerImageName }}:$(Build.BuildId)'
+          #       az acr build --image ${{ parameters.dockerImageName }}:$(Build.BuildId) --registry ${{ parameters.dockerRegistry }} --file Dockerfile .
 
   - template: templates/stages/helm-app-deploy.yaml
     parameters:
