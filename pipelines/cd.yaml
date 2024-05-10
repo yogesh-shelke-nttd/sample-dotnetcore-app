@@ -68,6 +68,7 @@ stages:
         displayName: 'Build and Push'
         pool: ${{ parameters.agentPool }}
         steps:
+          - template: /iac/steps/verify-ado-agent.yaml@utils
           - template: /iac/steps/acr-build-push-docker-image.yaml@utils
             parameters:
               serviceConnection: ${{ parameters.serviceConnection }}
