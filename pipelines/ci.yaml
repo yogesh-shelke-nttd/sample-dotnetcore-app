@@ -1,5 +1,10 @@
+# This is required only in case of Github repository
+# For azure repository, PR trigger is enabled by using Branch Validation Policies
 pr:
   - main
+
+# This is required to not trigger the individual CI pipeline for the branch.
+trigger: none
 
 resources:
   repositories:
