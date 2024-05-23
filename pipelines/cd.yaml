@@ -40,26 +40,7 @@ parameters:
   - name: imageTag
     type: string
     default: "None"
-  - name: dockerRegistry
-    type: string
-    default: 'dsopublic.azurecr.io'
-  - name: aksResourceGroup
-    type: string
-    default: 'dso-k8s-001'
-  - name: aksCluster
-    type: string
-    default: 'dso-ado-k8s-dev-001-aks'
-  - name: helmChart
-    type: string
-    default: 'dotnet-app'
-  - name: helmChartVersion
-    type: string
-    default: '0.1.0'
-  - name: helmReleaseName
-    type: string
-    default: 'sample'
   
-
 stages:
   - stage: BuildAndPush
     displayName: 'Build and Push Docker Image'
@@ -82,54 +63,26 @@ stages:
       deployEnvironments:
         - environment: 'dev'
           dependsOn: 'BuildAndPush'
-          azureEnvironment: aks-${{ parameters.helmReleaseName }}-dev
-          namespace: 'dev'
-          releaseName: ${{ parameters.helmReleaseName }}
+          variableFile: '/envs/dev/pipelines/variables.yaml@self'
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
-          helmChart: ${{ parameters.helmChart }}
-          helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: $(service_connection_dev)
-          aksResourceGroup: ${{ parameters.aksResourceGroup }}
-          aksCluster: ${{ parameters.aksCluster }}
         - environment: 'test'
           dependsOn: 'dev_Deploy'
-          azureEnvironment: aks-${{ parameters.helmReleaseName }}-test
-          namespace: 'test'
-          releaseName: ${{ parameters.helmReleaseName }}
+          variableFile: '/envs/test/pipelines/variables.yaml@self'
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
-          helmChart: ${{ parameters.helmChart }}
-          helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: $(service_connection_test)
-          aksResourceGroup: ${{ parameters.aksResourceGroup }}
-          aksCluster: ${{ parameters.aksCluster }}
         - environment: 'uat'
           dependsOn: 'test_Deploy'
-          azureEnvironment: aks-${{ parameters.helmReleaseName }}-uat
-          namespace: 'uat'
-          releaseName: ${{ parameters.helmReleaseName }}
+          variableFile: '/envs/uat/pipelines/variables.yaml@self'
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
-          helmChart: ${{ parameters.helmChart }}
-          helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: $(service_connection_uat)
-          aksResourceGroup: ${{ parameters.aksResourceGroup }}
-          aksCluster: ${{ parameters.aksCluster }}
         - environment: 'prod'
           dependsOn: 'uat_Deploy'
-          azureEnvironment: aks-${{ parameters.helmReleaseName }}-prod
-          namespace: 'prod'
-          releaseName: ${{ parameters.helmReleaseName }}
+          variableFile: '/envs/prod/pipelines/variables.yaml@self'
           acrName: ${{ parameters.acrName }}
           imageName: ${{ parameters.dockerImageName }}
           imageTag: ${{ parameters.imageTag }}
-          helmChart: ${{ parameters.helmChart }}
-          helmChartVersion: ${{ parameters.helmChartVersion }}
-          serviceConnection: $(service_connection_prod)
-          aksResourceGroup: ${{ parameters.aksResourceGroup }}
-          aksCluster: ${{ parameters.aksCluster }}
   
