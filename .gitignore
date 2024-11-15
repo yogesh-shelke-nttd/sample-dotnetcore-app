@@ -30,3 +30,4 @@ packages/
 *.swp
 *~
 .DS_Store
+.idea
